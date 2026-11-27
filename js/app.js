@@ -23,7 +23,7 @@ const DEF_COL = {
 const DEF = {
   theme: "classic", colors: { classic: { ...DEF_COL.classic }, modern: { ...DEF_COL.modern } }, fs: 12,
   ex: "binance", autoFb: true, hist: 3000,
-  custom: [], sel: "BTC", tf: 15, strat: "ema", detTab: "logic", view: "T",
+  custom: [], sel: "BTC", tf: 15, strat: "ema", detTab: "logic", view: "T", sort: "def",
   params: {}, acct: 100000, risk: 1, fee: 0.05, from: "",
   rules: { p1: 10, p2: 5, dl: 5, tl: 10, days: 4, max: 0 },
 };
@@ -466,11 +466,24 @@ function evaluate(r) {
 }
 
 // ---------------- Bảng 14 chiến lược ----------------
+// Sắp xếp chiến lược theo lãi/lỗ: "def" = thứ tự gốc, "desc" = lãi cao → thấp, "asc" = lỗ nhiều → lãi.
+function sortedMeta() {
+  if (S.sort === "def") return META;
+  const res = curRes(), d = S.sort === "asc" ? 1 : -1;
+  const v = (m) => { const r = res[m.id]; return r && r.trades ? evaluate(r).pct : null; };
+  return META.map((m) => [m, v(m)]).sort((a, b) => (a[1] == null) - (b[1] == null) || d * (a[1] - b[1])).map((x) => x[0]);
+}
+const SORT_TXT = { def: "Thứ tự gốc", desc: "Lãi cao → thấp", asc: "Lỗ nhiều → lãi" };
+const arrow = () => (S.sort === "desc" ? " ▼" : S.sort === "asc" ? " ▲" : "");
+function setSort(v) { S.sort = v; save(); document.querySelectorAll(".sortSel").forEach((x) => (x.value = v)); renderBoard(); renderEval(); }
+document.querySelectorAll(".sortSel").forEach((x) => { x.innerHTML = Object.entries(SORT_TXT).map(([k, t]) => `<option value="${k}">${t}</option>`).join(""); x.value = S.sort; x.onchange = () => setSort(x.value); });
+const nextSort = () => setSort(S.sort === "desc" ? "asc" : S.sort === "asc" ? "def" : "desc");
+
 function renderBoard() {
   const res = curRes(), src = cSrc;
   $("#boardTitle").textContent = `${META.length} chiến lược chạy song song${src ? " · " + src.sym : ""}`;
-  let h = `<thead><tr><th>Chiến lược</th><th>Khung</th><th>Trạng thái</th><th title="Lãi lỗ theo rủi ro ${S.risk}%/lệnh trên ${nf(S.acct, 0)} USD">Lãi/lỗ %</th><th>Thắng</th><th>Lệnh</th><th>R TB</th></tr></thead><tbody>`;
-  for (const m of META) {
+  let h = `<thead><tr><th>Chiến lược</th><th>Khung</th><th>Trạng thái</th><th class="sortable" data-sort title="Bấm để sắp xếp. Lãi lỗ theo rủi ro ${S.risk}%/lệnh trên ${nf(S.acct, 0)} USD">Lãi/lỗ %${arrow()}</th><th>Thắng</th><th>Lệnh</th><th>R TB</th></tr></thead><tbody>`;
+  for (const m of sortedMeta()) {
     const r = res[m.id], p = paramsOf(m.id);
     let stt = '<span class="st n">…</span>', pl = "", wr = "", n = "", ar = "";
     if (r && r.error) stt = `<span class="st e" title="${esc(r.error)}">LỖI</span>`;
@@ -484,7 +497,7 @@ function renderBoard() {
   $("#tb").innerHTML = h + "</tbody>";
 }
 const tfName = (m) => (m >= 1440 ? "D" : m >= 60 ? m / 60 + "h" : m + "m");
-$("#tb").onclick = (e) => { const r = e.target.closest("tr[data-id]"); if (!r) return; S.strat = r.dataset.id; focusTrade = null; save(); renderBoard(); renderDet(); drawTrades(); };
+$("#tb").onclick = (e) => { if (e.target.closest("[data-sort]")) { nextSort(); return; } const r = e.target.closest("tr[data-id]"); if (!r) return; S.strat = r.dataset.id; focusTrade = null; save(); renderBoard(); renderDet(); drawTrades(); };
 
 // ---------------- Chi tiết chiến lược ----------------
 let descReq = 0;
@@ -612,8 +625,8 @@ function renderEval() {
   const res = curRes();
   $("#evSym").textContent = cSrc ? cSrc.sym + " · " + EX[cSrc.ex].name : "";
   const R = S.rules;
-  let h = `<thead><tr><th>Chiến lược</th><th>Kết quả</th><th>Lợi nhuận / mục tiêu ${R.p1}%</th><th>Lỗ ngày lớn nhất / ${R.dl}%</th><th>Sụt giảm tổng / ${R.tl}%</th><th>Ngày GD</th><th>Lệnh</th><th>Thắng</th><th>Hệ số LN</th><th>R TB</th><th>MAE TB</th><th>MFE TB</th><th>Phí $</th></tr></thead><tbody>`;
-  for (const m of META) {
+  let h = `<thead><tr><th>Chiến lược</th><th>Kết quả</th><th class="sortable" data-sort title="Bấm để sắp xếp">Lợi nhuận / mục tiêu ${R.p1}%${arrow()}</th><th>Lỗ ngày lớn nhất / ${R.dl}%</th><th>Sụt giảm tổng / ${R.tl}%</th><th>Ngày GD</th><th>Lệnh</th><th>Thắng</th><th>Hệ số LN</th><th>R TB</th><th>MAE TB</th><th>MFE TB</th><th>Phí $</th></tr></thead><tbody>`;
+  for (const m of sortedMeta()) {
     const r = res[m.id];
     if (!r || !r.trades) { h += `<tr data-id="${m.id}"><td>${esc(m.name)}</td><td colspan="12" class="muted" style="text-align:left">${r && r.error ? "Lỗi: " + esc(r.error) : "Đang tính…"}</td></tr>`; continue; }
     const e = evaluate(r), pr = Math.max(0, Math.min(100, e.pct / R.p1 * 100)), dl = e.maxDayLoss / R.dl * 100, tl = e.maxDD / R.tl * 100;
@@ -626,7 +639,7 @@ function renderEval() {
   $("#evTb").innerHTML = h + "</tbody>";
   renderEvDet();
 }
-$("#evTb").onclick = (e) => { const r = e.target.closest("tr[data-id]"); if (!r) return; evSel = evSel === r.dataset.id ? null : r.dataset.id; renderEval(); };
+$("#evTb").onclick = (e) => { if (e.target.closest("[data-sort]")) { nextSort(); return; } const r = e.target.closest("tr[data-id]"); if (!r) return; evSel = evSel === r.dataset.id ? null : r.dataset.id; renderEval(); };
 function renderEvDet() {
   const box = $("#evDet"), m = META.find((x) => x.id === evSel), r = m && curRes()[m.id];
   if (!m || !r || !r.trades) { box.hidden = true; return; }

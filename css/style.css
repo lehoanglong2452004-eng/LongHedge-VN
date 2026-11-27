@@ -148,3 +148,6 @@ canvas.eq{width:100%;height:150px;display:block;border:1px solid var(--grid)}
   .clock{display:none}
   .search{max-width:none;flex-basis:100%}
 }
+.sortable{cursor:pointer;color:var(--c-acc)!important}
+.sortBox{display:flex;align-items:center;gap:4px;margin-left:auto}
+.sortBox select{font-size:11px;padding:1px 4px}

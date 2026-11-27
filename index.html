@@ -68,7 +68,7 @@
     <div class="chartmsg" id="chartMsg" hidden></div>
   </section>
   <section class="box board">
-    <div class="hd"><span class="lbl" id="boardTitle">14 chiến lược chạy song song</span><span class="muted sm" id="engState"></span></div>
+    <div class="hd"><span class="lbl" id="boardTitle">14 chiến lược chạy song song</span><label class="sortBox muted sm">Sắp xếp <select class="sortSel"></select></label><span class="muted sm" id="engState"></span></div>
     <div class="tblwrap"><table class="tb" id="tb"></table></div>
     <div class="det" id="det" hidden></div>
   </section>
@@ -83,6 +83,7 @@
       <label>Rủi ro / lệnh (%) <input type="number" id="risk" min="0.05" max="10" step="0.05"></label>
       <label>Phí mỗi chiều (%) <input type="number" id="fee" min="0" max="1" step="0.005"></label>
       <label>Tính từ ngày <input type="date" id="from"></label>
+      <label>Sắp xếp <select class="sortSel"></select></label>
       <button class="ib sm" id="fsEval" title="Toàn màn hình">⛶</button>
     </div>
     <div class="rules">
